@@ -1,0 +1,356 @@
+#include <iostream>
+#include <cmath>
+#include <iomanip>
+#include <cstdlib>
+using namespace std;
+
+double f(double x) {
+    return x * x * x - 6 * x;
+}
+
+double func1(double x) {
+    return cos(x) - 3 * x + 1;
+}
+
+double g(double x) {
+    return (1 + cos(x)) / 3;
+}
+
+double func2(double x) {
+    return x * x * x - 4 * x - 9;
+}
+
+double derivFunc(double x) {
+    return 3 * x * x - 4;
+}
+
+double func3(double x) {
+    return x * x * x - x * x + 2;
+}
+
+void bisection(double a, double b, int n) {
+    if (f(a) * f(b) >= 0) {
+        cout << "Function does not change sign over the interval." << endl;
+        return;
+    }
+
+    int i = 1;
+    double root = 0;
+    while (i <= n) {
+        double x = (a + b) / 2;
+        if (f(x) * f(b) < 0)
+            a = x;
+        else
+            b = x;
+
+        cout << "Iteration " << i << " x = " << x << " f(x) = " << f(x) << endl;
+
+        if (fabs(f(x)) < 1e-6) {
+            root = x;
+            break;
+        }
+        i++;
+    }
+    cout << "Root is: " << root << endl;
+}
+
+void fixedPointIteration(double x0, double e, int N) {
+    int step = 1;
+    double x1;
+
+    cout << setprecision(6) << fixed;
+    cout << "Fixed Point Iteration Method" << endl;
+
+    do {
+        x1 = g(x0);
+        cout << "Iteration-" << step << ":\t x1 = " << setw(10) << x1 << " and f(x1) = " << setw(10) << func1(x1) << endl;
+
+        if (fabs(func1(x1)) < e) {
+            cout << "Root is " << x1 << endl;
+            return;
+        }
+
+        x0 = x1;
+        step++;
+
+        if (step > N) {
+            cout << "Not Convergent." << endl;
+            return;
+        }
+    } while (fabs(func1(x1)) > e);
+}
+
+void newtonRaphson(double x) {
+    double h;
+    do {
+        h = func2(x) / derivFunc(x);
+        x = x - h;
+    } while (fabs(h) >= 0.001);
+
+    cout << "The value of the root is: " << x << endl;
+}
+
+void regulaFalsi(double a, double b) {
+    if (func3(a) * func3(b) >= 0) {
+        cout << "Function does not change sign over the interval." << endl;
+        return;
+    }
+
+    double c;
+    for (int i = 0; i < 1000000; i++) {
+        c = (a * func3(b) - b * func3(a)) / (func3(b) - func3(a));
+
+        if (func3(c) == 0)
+            break;
+        else if (func3(c) * func3(a) < 0)
+            b = c;
+        else
+            a = c;
+    }
+    cout << "The value of the root is: " << c << endl;
+}
+
+void gaussianElimination(int n, double a[10][10], double b[10]) {
+    double augmented[10][11];
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            augmented[i][j] = a[i][j];
+        }
+        augmented[i][n] = b[i];
+    }
+
+    for (int k = 0; k < n; k++) {
+        for (int i = k + 1; i < n; i++) {
+            if (fabs(augmented[i][k]) > fabs(augmented[k][k])) {
+                for (int j = 0; j <= n; j++) {
+                    swap(augmented[k][j], augmented[i][j]);
+                }
+            }
+        }
+
+        for (int i = k + 1; i < n; i++) {
+            double factor = augmented[i][k] / augmented[k][k];
+            for (int j = k; j <= n; j++) {
+                augmented[i][j] -= factor * augmented[k][j];
+            }
+        }
+    }
+
+    double x[10];
+    for (int i = n - 1; i >= 0; i--) {
+        x[i] = augmented[i][n] / augmented[i][i];
+        for (int j = i - 1; j >= 0; j--) {
+            augmented[j][n] -= augmented[j][i] * x[i];
+        }
+    }
+
+    cout << "Gaussian Elimination Method" << endl;
+    for (int i = 0; i < n; i++) {
+        cout << "x[" << i + 1 << "] = " << x[i] << endl;
+    }
+}
+
+void jacobiMethod(int n, double a[10][10], double b[10], double x[10], int maxIter, double tol) {
+    double x_new[10];
+    int iter = 0;
+    while (iter < maxIter) {
+        for (int i = 0; i < n; i++) {
+            x_new[i] = b[i];
+            for (int j = 0; j < n; j++) {
+                if (i != j)
+                    x_new[i] -= a[i][j] * x[j];
+            }
+            x_new[i] /= a[i][i];
+        }
+
+        bool converge = true;
+        for (int i = 0; i < n; i++) {
+            if (fabs(x_new[i] - x[i]) > tol)
+                converge = false;
+            x[i] = x_new[i];
+        }
+
+        if (converge)
+            break;
+
+        iter++;
+    }
+
+    cout << "Jacobi Method" << endl;
+    for (int i = 0; i < n; i++) {
+        cout << "x" << i + 1 << " = " << x[i] << endl;
+    }
+    cout << "Iterations: " << iter << endl;
+}
+
+void gaussSeidelMethod(int n, double a[10][10], double b[10], double x[10], int maxIter, double tol) {
+    int iter = 0;
+    while (iter < maxIter) {
+        bool converge = true;
+        for (int i = 0; i < n; i++) {
+            double sum = b[i];
+            for (int j = 0; j < n; j++) {
+                if (i != j)
+                    sum -= a[i][j] * x[j];
+            }
+            double x_new = sum / a[i][i];
+            if (fabs(x_new - x[i]) > tol)
+                converge = false;
+            x[i] = x_new;
+        }
+
+        if (converge)
+            break;
+
+        iter++;
+    }
+
+    cout << "Gauss-Seidel Method" << endl;
+    for (int i = 0; i < n; i++) {
+        cout << "x" << i + 1 << " = " << x[i] << endl;
+    }
+    cout << "Iterations: " << iter << endl;
+}
+
+int main() {
+    int choice, problemType;
+    bool keepRunning = true;
+    cout << "Choose the type of problem:\n";
+    cout << "1. Linear Equations\n2. Non-Linear Equations\n";
+    cout << "Enter your choice: ";
+    cin >> problemType;
+
+    while (keepRunning) {
+        if (problemType == 1) {
+            cout << "Choose a linear method to solve the equations:\n";
+            cout << "1. Gaussian Elimination Method\n2. Jacobi Method\n3. Gauss-Seidel Method\n";
+            cout << "Enter your choice: ";
+            cin >> choice;
+
+            switch (choice) {
+                case 1: {
+                    int n;
+                    double a[10][10], b[10];
+                    cout << "Enter number of equations: ";
+                    cin >> n;
+                    cout << "Enter the coefficients matrix (A):" << endl;
+                    for (int i = 0; i < n; i++) {
+                        for (int j = 0; j < n; j++) {
+                            cin >> a[i][j];
+                        }
+                    }
+                    cout << "Enter the constant terms vector (B):" << endl;
+                    for (int i = 0; i < n; i++) {
+                        cin >> b[i];
+                    }
+                    gaussianElimination(n, a, b);
+                    break;
+                }
+                case 2: {
+                    int n, maxIter;
+                    double a[10][10], b[10], x[10], tol;
+                    cout << "Enter number of equations: ";
+                    cin >> n;
+                    cout << "Enter the coefficients matrix (A):" << endl;
+                    for (int i = 0; i < n; i++) {
+                        for (int j = 0; j < n; j++) {
+                            cin >> a[i][j];
+                        }
+                    }
+                    cout << "Enter the constant terms vector (B):" << endl;
+                    for (int i = 0; i < n; i++) {
+                        cin >> b[i];
+                        x[i] = 0;
+                    }
+                    cout << "Enter maximum iterations: ";
+                    cin >> maxIter;
+                    cout << "Enter tolerance: ";
+                    cin >> tol;
+                    jacobiMethod(n, a, b, x, maxIter, tol);
+                    break;
+                }
+                case 3: {
+                    int n, maxIter;
+                    double a[10][10], b[10], x[10], tol;
+                    cout << "Enter number of equations: ";
+                    cin >> n;
+                    cout << "Enter the coefficients matrix (A):" << endl;
+                    for (int i = 0; i < n; i++) {
+                        for (int j = 0; j < n; j++) {
+                            cin >> a[i][j];
+                        }
+                    }
+                    cout << "Enter the constant terms vector (B):" << endl;
+                    for (int i = 0; i < n; i++) {
+                        cin >> b[i];
+                        x[i] = 0;
+                    }
+                    cout << "Enter maximum iterations: ";
+                    cin >> maxIter;
+                    cout << "Enter tolerance: ";
+                    cin >> tol;
+                    gaussSeidelMethod(n, a, b, x, maxIter, tol);
+                    break;
+                }
+                default:
+                    cout << "Invalid choice!" << endl;
+                    keepRunning = false;
+                    break;
+            }
+        } else if (problemType == 2) {
+            cout << "Choose a non-linear method to find the root:\n";
+            cout << "1. Bisection Method\n2. Fixed Point Iteration\n3. Newton-Raphson Method\n4. Regula Falsi Method\n";
+            cout << "Enter your choice: ";
+            cin >> choice;
+
+            switch (choice) {
+                case 1: {
+                    double a, b;
+                    int n;
+                    cout << "Enter interval [a, b]: ";
+                    cin >> a >> b;
+                    cout << "Enter number of iterations: ";
+                    cin >> n;
+                    bisection(a, b, n);
+                    break;
+                }
+                case 2: {
+                    double x0, e;
+                    int N;
+                    cout << "Enter initial guess: ";
+                    cin >> x0;
+                    cout << "Enter tolerable error: ";
+                    cin >> e;
+                    cout << "Enter maximum iterations: ";
+                    cin >> N;
+                    fixedPointIteration(x0, e, N);
+                    break;
+                }
+                case 3: {
+                    double x0;
+                    cout << "Enter initial guess: ";
+                    cin >> x0;
+                    newtonRaphson(x0);
+                    break;
+                }
+                case 4: {
+                    double a, b;
+                    cout << "Enter interval [a, b]: ";
+                    cin >> a >> b;
+                    regulaFalsi(a, b);
+                    break;
+                }
+                default:
+                    cout << "Invalid choice!" << endl;
+                    keepRunning = false;
+                    break;
+            }
+        } else {
+            cout << "Invalid problem type choice!" << endl;
+            keepRunning = false;
+        }
+    }
+
+    return 0;
+}
+
